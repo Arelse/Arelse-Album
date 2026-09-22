@@ -1,0 +1,9 @@
+{
+  "appId": "com.arelse.album",
+  "appName": "Arelse Album",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  },
+  "backgroundColor": "#0f0f14"
+}
