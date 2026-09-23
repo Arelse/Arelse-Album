@@ -11,7 +11,10 @@
   "dependencies": {
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-router-dom": "^6.26.0"
+    "react-router-dom": "^6.26.0",
+    "@capacitor/camera": "^6.1.2",
+    "@tensorflow/tfjs": "^4.20.0",
+    "@tensorflow-models/mobilenet": "^2.1.1"
   },
   "devDependencies": {
     "@capacitor/android": "^6.1.2",
