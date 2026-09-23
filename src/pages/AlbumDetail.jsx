@@ -2,21 +2,20 @@ import React, { useRef, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useData } from '../context/DataContext.jsx'
 import { analyseAlbum } from '../utils/analyser.js'
-import { classifyImage } from '../utils/aiAnalyser.js'
+import { buildImageRecord } from '../utils/imageRecord.js'
 import { pickFromGallery } from '../utils/gallery.js'
-
-function newImageId() {
-  return `img_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
-}
+import AlbumCover from '../components/AlbumCover.jsx'
 
 export default function AlbumDetail() {
   const { id } = useParams()
-  const { albums, loading, addImage, removeImage } = useData()
+  const { albums, loading, addImage, removeImage, updateAlbum } = useData()
   const fileRef = useRef(null)
   const [analysis, setAnalysis] = useState(null)
   const [analysing, setAnalysing] = useState(false)
   const [importing, setImporting] = useState(false)
   const [importStatus, setImportStatus] = useState('')
+  const [editingCover, setEditingCover] = useState(false)
+  const [coverBusy, setCoverBusy] = useState(false)
 
   if (loading) return <div className="skeleton" style={{ height: 300, borderRadius: 14 }} />
 
@@ -28,17 +27,6 @@ export default function AlbumDetail() {
         <Link to="/albums" className="btn">Back to Albums</Link>
       </div>
     )
-  }
-
-  const buildImageRecord = async (dataUrl) => {
-    let tags = []
-    try {
-      const result = await classifyImage(dataUrl)
-      tags = result.tags
-    } catch (e) {
-      console.warn('AI classification skipped:', e.message)
-    }
-    return { id: newImageId(), url: dataUrl, tags, addedAt: Date.now() }
   }
 
   const handleUpload = async (e) => {
@@ -85,23 +73,53 @@ export default function AlbumDetail() {
     setAnalysing(false)
   }
 
+  const setCoverFromImage = async (url) => {
+    await updateAlbum(album.id, { coverImage: url })
+    setEditingCover(false)
+  }
+
+  const importNewCover = async () => {
+    setCoverBusy(true)
+    try {
+      const dataUrls = await pickFromGallery()
+      if (dataUrls[0]) await updateAlbum(album.id, { coverImage: dataUrls[0] })
+      setEditingCover(false)
+    } catch (e) {
+      if (e?.message && !/cancel/i.test(e.message)) alert('Could not import cover: ' + e.message)
+    } finally {
+      setCoverBusy(false)
+    }
+  }
+
+  const clearCover = async () => {
+    await updateAlbum(album.id, { coverImage: null })
+    setEditingCover(false)
+  }
+
   return (
     <div>
       <Link to="/albums" style={{ color: 'var(--text-dim)', fontSize: '0.85rem', textDecoration: 'none' }}>← Back to Albums</Link>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', margin: '10px 0 20px', flexWrap: 'wrap', gap: 12 }}>
-        <div>
+
+      <div style={{ display: 'flex', gap: 16, margin: '14px 0 20px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
+        <div style={{ width: 120, flexShrink: 0 }}>
+          <AlbumCover album={album} />
+          <button className="btn secondary" style={{ width: '100%', marginTop: 8, fontSize: '0.75rem', padding: '6px' }} onClick={() => setEditingCover(true)}>
+            Edit cover
+          </button>
+        </div>
+        <div style={{ flex: 1, minWidth: 200 }}>
           <h2 style={{ margin: '0 0 6px' }}>{album.name}</h2>
           <span className="badge outline">{album.category}</span>
           {album.description && <p style={{ color: 'var(--text-dim)', marginTop: 8 }}>{album.description}</p>}
-        </div>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <button className="btn" onClick={importFromGallery} disabled={importing}>
-            {importing ? (importStatus || 'Working…') : '+ Import from gallery'}
-          </button>
-          <label className="btn secondary" style={{ cursor: 'pointer' }}>
-            Add single file
-            <input ref={fileRef} type="file" accept="image/*" onChange={handleUpload} style={{ display: 'none' }} disabled={importing} />
-          </label>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
+            <button className="btn" onClick={importFromGallery} disabled={importing}>
+              {importing ? (importStatus || 'Working…') : '+ Import from gallery'}
+            </button>
+            <label className="btn secondary" style={{ cursor: 'pointer' }}>
+              Add single file
+              <input ref={fileRef} type="file" accept="image/*" onChange={handleUpload} style={{ display: 'none' }} disabled={importing} />
+            </label>
+          </div>
         </div>
       </div>
 
@@ -148,6 +166,33 @@ export default function AlbumDetail() {
               >✕</button>
             </div>
           ))}
+        </div>
+      )}
+
+      {editingCover && (
+        <div className="modal-overlay" onClick={() => setEditingCover(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <h3 style={{ marginTop: 0 }}>Edit cover</h3>
+            <button className="btn" style={{ width: '100%', marginBottom: 8 }} onClick={importNewCover} disabled={coverBusy}>
+              {coverBusy ? 'Working…' : '+ Import new cover photo'}
+            </button>
+            {album.coverImage && (
+              <button className="btn secondary" style={{ width: '100%', marginBottom: 12 }} onClick={clearCover}>
+                Use plain color instead
+              </button>
+            )}
+            {album.images.length > 0 && (
+              <>
+                <p style={{ color: 'var(--text-dim)', fontSize: '0.8rem', marginBottom: 8 }}>Or pick from this album's photos:</p>
+                <div className="image-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(70px, 1fr))' }}>
+                  {album.images.map(img => (
+                    <img key={img.id} src={img.url} alt="" style={{ cursor: 'pointer', borderRadius: 6 }} onClick={() => setCoverFromImage(img.url)} />
+                  ))}
+                </div>
+              </>
+            )}
+            <button className="btn secondary" style={{ width: '100%', marginTop: 14 }} onClick={() => setEditingCover(false)}>Close</button>
+          </div>
         </div>
       )}
     </div>
