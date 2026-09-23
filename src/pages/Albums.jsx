@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useData } from '../context/DataContext.jsx'
+import AlbumCover from '../components/AlbumCover.jsx'
 
 const CATEGORIES = ['Manhwa', 'Memes', 'Other']
 const COLORS = ['#6c3fd1', '#e6a817', '#4a6fd6', '#3fd17f', '#e6763a', '#c0392b']
@@ -60,7 +61,7 @@ export default function Albums() {
   const { albums, loading, createAlbum, updateAlbum, deleteAlbum } = useData()
   const [params, setParams] = useSearchParams()
   const category = params.get('category')
-  const [modal, setModal] = useState(null) // null | 'new' | album object
+  const [modal, setModal] = useState(null)
 
   const filtered = category ? albums.filter(a => a.category === category) : albums
 
@@ -100,7 +101,7 @@ export default function Albums() {
           {filtered.map(a => (
             <div key={a.id} className="card">
               <Link to={`/albums/${a.id}`} style={{ textDecoration: 'none', color: 'var(--text)' }}>
-                <div className="album-cover" style={{ background: a.coverColor }}>{a.images.length} pages</div>
+                <AlbumCover album={a} />
                 <div style={{ fontWeight: 600 }}>{a.name}</div>
               </Link>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
