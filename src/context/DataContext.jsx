@@ -1,21 +1,25 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
-import { seedAlbums } from '../data/seed.js'
+import { idbGet, idbSet } from '../utils/idb.js'
 
 const DataContext = createContext(null)
 const ALBUMS_KEY = 'arelse_albums'
 
-function load() {
+async function load() {
   try {
-    const raw = localStorage.getItem(ALBUMS_KEY)
+    const raw = await idbGet(ALBUMS_KEY)
     if (raw) return JSON.parse(raw)
-  } catch {}
-  const seeded = seedAlbums()
-  localStorage.setItem(ALBUMS_KEY, JSON.stringify(seeded))
-  return seeded
+  } catch (e) {
+    console.error('Failed to load albums from storage', e)
+  }
+  return []
 }
 
+// Fire-and-forget persist: called as a side effect inside setAlbums
+// updaters below (same pattern as the old localStorage version), just
+// backed by IndexedDB now since real gallery photos need much more than
+// localStorage's ~5-10MB quota.
 function persist(albums) {
-  localStorage.setItem(ALBUMS_KEY, JSON.stringify(albums))
+  idbSet(ALBUMS_KEY, JSON.stringify(albums)).catch(e => console.error('Failed to save albums', e))
 }
 
 const delay = (ms) => new Promise(res => setTimeout(res, ms))
@@ -25,17 +29,18 @@ export function DataProvider({ children }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Simulate an initial fetch so the dashboard can show a real loading state.
-    delay(500).then(() => {
-      setAlbums(load())
-      setLoading(false)
-    })
+    let cancelled = false
+    ;(async () => {
+      await delay(350)
+      const data = await load()
+      if (!cancelled) {
+        setAlbums(data)
+        setLoading(false)
+      }
+    })()
+    return () => { cancelled = true }
   }, [])
 
-  // --- Optimistic CRUD ---
-  // Each mutation updates local state immediately, persists to localStorage
-  // as the "commit", and would roll back on a failed network write in a
-  // real backend-connected version.
   const createAlbum = async (data) => {
     const optimistic = {
       id: `alb_${Date.now()}`,
@@ -51,7 +56,7 @@ export function DataProvider({ children }) {
       persist(next)
       return next
     })
-    await delay(200)
+    await delay(150)
     return optimistic
   }
 
@@ -61,7 +66,7 @@ export function DataProvider({ children }) {
       persist(next)
       return next
     })
-    await delay(150)
+    await delay(100)
   }
 
   const deleteAlbum = async (id) => {
@@ -72,8 +77,8 @@ export function DataProvider({ children }) {
       persist(next)
       return next
     })
-    await delay(150)
-    return () => { setAlbums(prevSnapshot); persist(prevSnapshot) } // rollback handle
+    await delay(100)
+    return () => { setAlbums(prevSnapshot); persist(prevSnapshot) }
   }
 
   const addImage = async (albumId, image) => {
@@ -82,7 +87,6 @@ export function DataProvider({ children }) {
       persist(next)
       return next
     })
-    await delay(150)
   }
 
   const removeImage = async (albumId, imageId) => {
@@ -91,7 +95,6 @@ export function DataProvider({ children }) {
       persist(next)
       return next
     })
-    await delay(100)
   }
 
   return (
