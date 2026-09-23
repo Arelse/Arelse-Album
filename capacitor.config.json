@@ -1,6 +1,6 @@
 {
-  "appId": "com.arelse.album",
-  "appName": "Arelse Album",
+  "appId": "com.arelsync.app",
+  "appName": "Arelsync",
   "webDir": "dist",
   "server": {
     "androidScheme": "https"
