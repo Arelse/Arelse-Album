@@ -1,54 +1,61 @@
-import { MANHWA_DB, MEME_TAGS } from '../data/seed.js'
+import { MANHWA_DB, MEME_TAGS, COMIC_TAGS } from '../data/seed.js'
 
-// Lightweight, fully-offline heuristic analyser.
-// Scores each image's tags against the reference manhwa tag sets and the
-// meme tag list, then aggregates across the album. This is intentionally
-// simple (no bundled ML model / no network calls) so it works inside an
-// APK with zero backend. Swap this module out for a real vision model
-// behind an API if you want production-grade recognition.
+// Scores an album's AI-derived tags against reference sets. This is
+// intentionally honest about what it can and can't do: MobileNet (the AI
+// model doing the actual classification, see aiAnalyser.js) was trained on
+// general real-world objects, not manhwa art, so exact-series matching
+// only fires when tags happen to overlap with the small starter reference
+// set in data/seed.js (or tags you've added by hand). What it's genuinely
+// reliable at is telling comic/illustration-style pages apart from
+// meme/screenshot-style images, using real classifier output.
 export function analyseAlbum(album) {
-  const scores = MANHWA_DB.map(entry => {
-    let hits = 0
-    let total = 0
-    for (const image of album.images) {
-      total += image.tags.length || 1
-      for (const t of image.tags) {
-        if (entry.tags.includes(t)) hits += 1
-      }
-    }
-    return { entry, confidence: total ? hits / total : 0 }
-  }).sort((a, b) => b.confidence - a.confidence)
-
-  const memeHits = album.images.reduce((acc, img) => {
-    return acc + img.tags.filter(t => MEME_TAGS.includes(t)).length
-  }, 0)
-  const memeTotal = album.images.reduce((a, img) => a + (img.tags.length || 1), 0)
-  const memeConfidence = memeTotal ? memeHits / memeTotal : 0
-
-  const best = scores[0]
-
-  if (memeConfidence > (best?.confidence || 0) && memeConfidence > 0) {
+  const allTags = album.images.flatMap(i => i.tags || [])
+  if (allTags.length === 0) {
     return {
-      type: 'meme',
-      label: 'Meme collection',
-      confidence: Math.min(0.98, 0.5 + memeConfidence),
-      detail: 'Tag signature matches common meme formats/templates.'
+      type: 'unknown',
+      label: 'No AI tags yet',
+      confidence: 0,
+      detail: 'Import or add images (with a connection) so the on-device AI can classify them first.'
     }
   }
+  const total = allTags.length
+  const score = (list) => list.reduce((acc, t) => acc + allTags.filter(x => x === t).length, 0) / total
 
-  if (best && best.confidence > 0.2) {
+  const memeScore = score(MEME_TAGS)
+  const comicScore = score(COMIC_TAGS)
+  const manhwaScores = MANHWA_DB
+    .map(entry => ({ entry, score: score(entry.tags) }))
+    .sort((a, b) => b.score - a.score)
+  const bestManhwa = manhwaScores[0]
+
+  if (bestManhwa && bestManhwa.score > 0.15) {
     return {
       type: 'manhwa',
-      label: best.entry.title,
-      confidence: Math.min(0.97, 0.4 + best.confidence),
-      detail: `Matched panel tags against "${best.entry.title}" reference set.`
+      label: bestManhwa.entry.title,
+      confidence: Math.min(0.95, 0.4 + bestManhwa.score),
+      detail: `Tag overlap with your "${bestManhwa.entry.title}" reference entry.`
     }
   }
-
+  if (memeScore > comicScore && memeScore > 0.08) {
+    return {
+      type: 'meme',
+      label: 'Meme / screenshot collection',
+      confidence: Math.min(0.95, 0.5 + memeScore),
+      detail: 'AI labels match common meme/screenshot patterns (flat graphics, text, templates).'
+    }
+  }
+  if (comicScore > 0.08) {
+    return {
+      type: 'comic',
+      label: 'Comic / illustrated page',
+      confidence: Math.min(0.9, 0.4 + comicScore),
+      detail: "AI recognizes comic/illustration style, but can't name the exact series — there's no public manhwa-identification model to match against."
+    }
+  }
   return {
     type: 'unknown',
-    label: 'Unrecognized source',
+    label: 'No strong match',
     confidence: 0,
-    detail: 'Not enough tag signal to confidently match a known series or meme format.'
+    detail: "AI labels didn't line up with memes, comic art, or your reference set."
   }
 }
