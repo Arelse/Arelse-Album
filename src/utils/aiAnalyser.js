@@ -1,17 +1,6 @@
 import * as tf from '@tensorflow/tfjs'
 import * as mobilenet from '@tensorflow-models/mobilenet'
 
-// Real on-device image classification (MobileNet, trained on ImageNet).
-// This is a genuine trained neural network doing genuine inference on the
-// device — not a lookup table. Two honest limits worth knowing:
-// 1. It needs network access the first time it runs, to fetch the ~16MB
-//    model weights. The browser cache then makes later runs fast, and
-//    often work offline too, until that cache gets cleared.
-// 2. MobileNet knows ~1000 general real-world ImageNet categories (dog
-//    breeds, furniture, food, vehicles...). It was never trained on manhwa
-//    art, so it can't name a specific series. What it's genuinely good at
-//    is telling comic/illustration art apart from photos, screenshots, or
-//    meme-style images — which is what the album analyser uses it for.
 let modelPromise = null
 let backendReady = false
 
@@ -21,7 +10,7 @@ async function ensureBackend() {
   backendReady = true
 }
 
-function getModel() {
+export function getModel() {
   if (!modelPromise) {
     modelPromise = ensureBackend().then(() => mobilenet.load())
   }
@@ -37,8 +26,6 @@ function loadImage(src) {
   })
 }
 
-// Classifies one image and returns lowercase keyword tags derived from the
-// model's real predictions (kept if confidence >= 8%).
 export async function classifyImage(dataUrl) {
   const model = await getModel()
   const img = await loadImage(dataUrl)
@@ -53,4 +40,24 @@ export async function classifyImage(dataUrl) {
     })
   }
   return { tags: [...tags], raw: predictions }
+}
+
+export async function getEmbedding(dataUrl) {
+  const model = await getModel()
+  const img = await loadImage(dataUrl)
+  const activation = model.infer(img, true)
+  const data = await activation.data()
+  activation.dispose()
+  return Array.from(data)
+}
+
+export function cosineSimilarity(a, b) {
+  let dot = 0, magA = 0, magB = 0
+  for (let i = 0; i < a.length; i++) {
+    dot += a[i] * b[i]
+    magA += a[i] * a[i]
+    magB += b[i] * b[i]
+  }
+  if (magA === 0 || magB === 0) return 0
+  return dot / (Math.sqrt(magA) * Math.sqrt(magB))
 }
