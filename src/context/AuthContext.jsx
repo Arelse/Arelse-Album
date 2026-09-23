@@ -9,27 +9,33 @@ function loadUsers() {
 }
 function saveUsers(users) { localStorage.setItem(USERS_KEY, JSON.stringify(users)) }
 
-// Simple non-cryptographic hash - fine for an on-device demo app with no
-// server round-trip. Do not reuse this for anything internet-facing.
 function hash(str) {
   let h = 0
   for (let i = 0; i < str.length; i++) { h = (h * 31 + str.charCodeAt(i)) | 0 }
   return String(h)
 }
 
+// Note on "real Google/Gmail sign-in": genuine Google OAuth requires an
+// OAuth client registered in Google Cloud Console under your own account,
+// tied to this app's package name and signing certificate fingerprint —
+// credentials only you can create. Wiring the native plugin blind (without
+// those credentials and without a way to test-build here) risks silently
+// breaking the whole APK build. What's implemented instead, and is fully
+// real: local email/password accounts (below), and a real Guest mode that
+// needs no email at all.
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const users = loadUsers()
-    if (users.length === 0) {
-      saveUsers([{ email: 'demo@arelse.app', name: 'Demo User', passHash: hash('demo1234') }])
-    }
     const session = localStorage.getItem(SESSION_KEY)
     if (session) {
-      const found = loadUsers().find(u => u.email === session)
-      if (found) setUser({ email: found.email, name: found.name })
+      if (session === '__guest__') {
+        setUser({ email: null, name: 'Guest', guest: true })
+      } else {
+        const found = loadUsers().find(u => u.email === session)
+        if (found) setUser({ email: found.email, name: found.name, guest: false })
+      }
     }
     setLoading(false)
   }, [])
@@ -41,7 +47,7 @@ export function AuthProvider({ children }) {
       throw new Error('Invalid email or password')
     }
     localStorage.setItem(SESSION_KEY, found.email)
-    setUser({ email: found.email, name: found.name })
+    setUser({ email: found.email, name: found.name, guest: false })
   }
 
   const register = (name, email, password) => {
@@ -51,7 +57,12 @@ export function AuthProvider({ children }) {
     const newUser = { email: normEmail, name: name.trim() || 'New User', passHash: hash(password) }
     saveUsers([...users, newUser])
     localStorage.setItem(SESSION_KEY, newUser.email)
-    setUser({ email: newUser.email, name: newUser.name })
+    setUser({ email: newUser.email, name: newUser.name, guest: false })
+  }
+
+  const loginAsGuest = () => {
+    localStorage.setItem(SESSION_KEY, '__guest__')
+    setUser({ email: null, name: 'Guest', guest: true })
   }
 
   const logout = () => {
@@ -60,7 +71,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, register, loginAsGuest, logout }}>
       {children}
     </AuthContext.Provider>
   )
