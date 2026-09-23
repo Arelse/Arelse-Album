@@ -25,8 +25,7 @@ export default function Dashboard() {
   if (albums.length === 0) {
     return (
       <div className="empty-state">
-        <h3>No albums yet</h3>
-        <p>Create your first album to get started.</p>
+        <h3>No albums yet</h3> / <p>Create your first album, then import real photos from your gallery.</p>
         <Link to="/albums" className="btn">Go to Albums</Link>
       </div>
     )
