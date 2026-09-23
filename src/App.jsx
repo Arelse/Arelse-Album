@@ -9,13 +9,15 @@ import Dashboard from './pages/Dashboard.jsx'
 import Albums from './pages/Albums.jsx'
 import AlbumDetail from './pages/AlbumDetail.jsx'
 import Settings from './pages/Settings.jsx'
+import WholeGallery from './pages/WholeGallery.jsx'
+import Recognizer from './pages/Recognizer.jsx'
 
-const TITLES = { '/': 'Dashboard', '/albums': 'Albums', '/settings': 'Settings' }
+const TITLES = { '/': 'Dashboard', '/albums': 'Albums', '/settings': 'Settings', '/gallery': 'Whole Gallery', '/recognizer': 'Recognizer' }
 
 function Shell({ theme, setTheme }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const location = useLocation()
-  const title = TITLES[location.pathname] || (location.pathname.startsWith('/albums/') ? 'Album' : 'Arelse Album')
+  const title = TITLES[location.pathname] || (location.pathname.startsWith('/albums/') ? 'Album' : 'Arelsync')
 
   useEffect(() => setMenuOpen(false), [location.pathname])
 
@@ -30,6 +32,8 @@ function Shell({ theme, setTheme }) {
             <Route path="/" element={<Dashboard />} />
             <Route path="/albums" element={<Albums />} />
             <Route path="/albums/:id" element={<AlbumDetail />} />
+            <Route path="/gallery" element={<WholeGallery />} />
+            <Route path="/recognizer" element={<Recognizer />} />
             <Route path="/settings" element={<Settings theme={theme} setTheme={setTheme} />} />
           </Routes>
         </div>
