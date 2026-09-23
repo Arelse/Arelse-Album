@@ -1,6 +1,7 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
 import { useData } from '../context/DataContext.jsx'
+import AlbumCover from '../components/AlbumCover.jsx'
 
 export default function Dashboard() {
   const { albums, loading } = useData()
@@ -47,7 +48,7 @@ export default function Dashboard() {
       <div className="grid">
         {recent.map(a => (
           <Link key={a.id} to={`/albums/${a.id}`} className="card" style={{ textDecoration: 'none', color: 'var(--text)' }}>
-            <div className="album-cover" style={{ background: a.coverColor }}>{a.images.length} pages</div>
+            <AlbumCover album={a} />
             <div style={{ fontWeight: 600 }}>{a.name}</div>
             <span className="badge outline" style={{ marginTop: 6 }}>{a.category}</span>
           </Link>
