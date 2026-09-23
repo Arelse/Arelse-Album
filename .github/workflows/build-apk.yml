@@ -1,4 +1,4 @@
-name: Build Arelse Album APK
+name: Build Arelsync APK
 
 on:
   push:
@@ -35,6 +35,21 @@ jobs:
       - name: Add Android platform
         run: npx cap add android
 
+      - name: Generate app icons from assets/icon.png
+        run: npx @capacitor/assets generate --android --iconBackgroundColor '#0f0f14' --iconBackgroundColorDark '#0f0f14'
+
+      - name: Register as an image viewer (Open-with option)
+        run: |
+          node -e "
+            const fs = require('fs');
+            const path = 'android/app/src/main/AndroidManifest.xml';
+            let xml = fs.readFileSync(path, 'utf8');
+            const extra = '<intent-filter><action android:name=\"android.intent.action.VIEW\" /><category android:name=\"android.intent.category.DEFAULT\" /><category android:name=\"android.intent.category.BROWSABLE\" /><data android:mimeType=\"image/*\" /></intent-filter>';
+            xml = xml.replace('</activity>', extra + '</activity>');
+            fs.writeFileSync(path, xml);
+            console.log('Patched AndroidManifest.xml with image-viewer intent filter');
+          "
+
       - name: Sync Capacitor
         run: npx cap sync android
 
@@ -45,5 +60,5 @@ jobs:
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: arelse-album-apk
+          name: arelsync-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
