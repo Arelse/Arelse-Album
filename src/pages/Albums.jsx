@@ -92,7 +92,7 @@ export default function Albums() {
       ) : filtered.length === 0 ? (
         <div className="empty-state">
           <h3>No albums here</h3>
-          <p>{category ? `You don't have any "${category}" albums yet.` : 'Create your first album to get started.'}</p>
+          <p>{category ? \You don't have any "${category}" albums yet.` : 'Create an album, then open it to import real photos from your gallery.'}`</p>
           <button className="btn" onClick={() => setModal('new')}>+ New album</button>
         </div>
       ) : (
