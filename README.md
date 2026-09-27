@@ -1,33 +1,47 @@
-# Arelse Album
+# Arelsync
 
-A full-stack-style album manager for organizing manhwa pages, meme dumps,
-and real photos from your device — with an on-device AI analyser that
-tells comic/illustrated pages apart from memes and screenshots.
+An album manager for manhwa pages, memes, and real photos from your
+device — with a persistent "Whole Gallery" library, a real on-device AI
+analyser, and a visual-similarity Recognizer that can auto-sort your
+gallery into per-series albums.
 
 ## What's real here
 
-- **Gallery import is real.** It uses Capacitor's official Camera plugin,
-  which opens Android's actual native photo picker — your whole gallery —
-  and lets you multi-select real photos to bring into an album.
-- **The AI analyser is real.** It runs MobileNet (a real trained neural
-  network) fully on-device via TensorFlow.js to classify each image and
-  generate tags from genuine predictions, not hand-typed keywords.
-- **No more demo data.** The app starts empty. Every album and photo in it
-  is something you actually added.
+- Custom icon, generated at build time from `assets/icon.png`.
+- Gallery import via Capacitor's official Camera plugin — opens Android's
+  actual native photo picker.
+- Whole Gallery (sidebar): a persistent library — every photo you import
+  sticks around here permanently, independent of any album.
+- The AI analyser and Recognizer both run MobileNet, a real trained
+  neural network, entirely on-device via TensorFlow.js.
+- Edit cover lets you set any album's cover to one of its own photos, or
+  import a fresh one.
+- 14 themes, real Guest login, real local email/password accounts.
+- Registers an Android intent-filter so the app shows up in "Open with"
+  when viewing images elsewhere on the phone.
 
-## Honest limits
+## Two honest limits
 
-- MobileNet knows ~1000 general real-world ImageNet categories. It was
-  never trained on manhwa art, so it can't name a specific series. What
-  it's genuinely good at: telling comic/illustration-style pages apart
-  from photos, screenshots, or meme-style images. Extend `MANHWA_DB` in
-  `src/data/seed.js` with your own keywords for closer-to-series matching.
-- The AI model (~16MB) needs a network connection the first time it runs;
-  after that the browser cache usually makes it fast and often works
-  offline too, until that cache is cleared.
-- All data lives on-device: albums/images in IndexedDB (localStorage is
-  too small for real photos), auth as a simple local account system.
-- Debug-signed APK — fine for your own device, not Play Store ready.
+**"Set as default gallery"**: Android controls default-app behavior at the
+OS level (Settings → Apps → Default apps), not something an app can force.
+Arelsync registers as a genuine "Open with" option for images instead.
+
+**Real Gmail/Google sign-in**: genuine Google OAuth needs a client ID you
+create yourself in Google Cloud Console, tied to this app's package name
+and signing certificate. Local email/password accounts and Guest mode are
+real and implemented instead.
+
+## The Recognizer, honestly
+
+MobileNet was trained on ~1000 general ImageNet categories, never on
+manhwa art, so it can't name a series from nothing. The Recognizer
+compares the visual fingerprint of gallery photos against example images
+you label per series — real similarity search, but accuracy depends on
+how visually distinct your examples are. Treat matches as suggestions.
+
+"Whole gallery" scope: doesn't silently mirror your entire phone library
+in the background. Every photo you explicitly import via "+ Import" is
+added permanently, building a real, complete library over time.
 
 ## Run it as a website
 
@@ -36,5 +50,11 @@ npm run dev
 
 ## Get the APK
 
-Push to GitHub, open the Actions tab, download the `arelse-album-apk`
-artifact when the workflow finishes, and install it on your phone.
+Push to GitHub, open the Actions tab, download the `arelsync-apk`
+artifact when the workflow finishes, and install it.
+
+## Other notes
+
+- Debug-signed APK — fine for your own device, not Play Store ready.
+- All data lives on-device: albums/gallery/reference series in IndexedDB,
+  auth as a local account system.
