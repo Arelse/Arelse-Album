@@ -1,45 +1,24 @@
-import { idbGet, idbSet } from './idb.js'
+import { Camera } from '@capacitor/camera'
 
-const KEY = 'arelse_whole_gallery'
-
-export async function getGallery() {
-  try {
-    const raw = await idbGet(KEY)
-    return raw ? JSON.parse(raw) : []
-  } catch (e) {
-    console.error('Failed to load whole gallery', e)
-    return []
+// Opens the device's actual native photo picker — your real gallery, not a
+// mock — and lets you multi-select photos. On Android this uses the
+// system Photo Picker (Android 11+), which doesn't even require a storage
+// permission prompt. Also works in a plain browser preview (falls back to
+// a standard multi-file input there), so you can test it with `npm run dev`.
+export async function pickFromGallery() {
+  const result = await Camera.pickImages({ quality: 85 })
+  const photos = result?.photos || []
+  const dataUrls = []
+  for (const photo of photos) {
+    const res = await fetch(photo.webPath)
+    const blob = await res.blob()
+    const dataUrl = await new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(reader.result)
+      reader.onerror = reject
+      reader.readAsDataURL(blob)
+    })
+    dataUrls.push(dataUrl)
   }
-}
-
-async function save(items) {
-  await idbSet(KEY, JSON.stringify(items))
-}
-
-export async function addToGallery(records) {
-  const current = await getGallery()
-  const next = [...records, ...current]
-  await save(next)
-  return next
-}
-
-export async function removeFromGallery(id) {
-  const current = await getGallery()
-  const next = current.filter(i => i.id !== id)
-  await save(next)
-  return next
-}
-
-export async function markAssigned(id, seriesName) {
-  const current = await getGallery()
-  const next = current.map(i => i.id === id ? { ...i, matchedSeries: seriesName } : i)
-  await save(next)
-  return next
-}
-
-export async function resetAssignments() {
-  const current = await getGallery()
-  const next = current.map(({ matchedSeries, ...rest }) => rest)
-  await save(next)
-  return next
+  return dataUrls
 }
