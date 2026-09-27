@@ -36,3 +36,10 @@ export async function markAssigned(id, seriesName) {
   await save(next)
   return next
 }
+
+export async function resetAssignments() {
+  const current = await getGallery()
+  const next = current.map(({ matchedSeries, ...rest }) => rest)
+  await save(next)
+  return next
+}
