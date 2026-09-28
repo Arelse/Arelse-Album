@@ -1,13 +1,17 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
 import { useData } from '../context/DataContext.jsx'
-import AlbumCover from '../components/AlbumCover.jsx'
+import AlbumGrid from '../components/AlbumGrid.jsx'
+import ViewControls from '../components/ViewControls.jsx'
+import { useViewPrefs } from '../utils/viewPrefs.js'
+import { SERIES_CATEGORIES } from '../utils/constants.js'
 
 export default function Dashboard() {
   const { albums, loading } = useData()
+  const { layout, setLayout, perRow, setPerRow } = useViewPrefs()
 
   const totalImages = albums.reduce((a, al) => a + al.images.length, 0)
-  const manhwaCount = albums.filter(a => a.category === 'Manhwa').length
+  const seriesCount = albums.filter(a => SERIES_CATEGORIES.includes(a.category)).length
   const memeCount = albums.filter(a => a.category === 'Memes').length
 
   if (loading) {
@@ -33,27 +37,25 @@ export default function Dashboard() {
     )
   }
 
-  const recent = [...albums].sort((a, b) => b.createdAt - a.createdAt).slice(0, 6)
+  const recent = [...albums].sort((a, b) => b.createdAt - a.createdAt).slice(0, 12)
 
   return (
     <div>
       <div className="stat-row">
         <div className="card"><div className="stat-value">{albums.length}</div><div className="stat-label">Total albums</div></div>
         <div className="card"><div className="stat-value">{totalImages}</div><div className="stat-label">Total images</div></div>
-        <div className="card"><div className="stat-value">{manhwaCount}</div><div className="stat-label">Manhwa albums</div></div>
+        <div className="card"><div className="stat-value">{seriesCount}</div><div className="stat-label">Series albums</div></div>
         <div className="card"><div className="stat-value">{memeCount}</div><div className="stat-label">Meme albums</div></div>
       </div>
 
-      <h3 style={{ marginBottom: 12 }}>Recent albums</h3>
-      <div className="grid">
-        {recent.map(a => (
-          <Link key={a.id} to={`/albums/${a.id}`} className="card" style={{ textDecoration: 'none', color: 'var(--text)' }}>
-            <AlbumCover album={a} />
-            <div style={{ fontWeight: 600 }}>{a.name}</div>
-            <span className="badge outline" style={{ marginTop: 6 }}>{a.category}</span>
-          </Link>
-        ))}
+      <div className="section-head">
+        <h3 style={{ margin: 0 }}>Recent albums</h3>
+        <Link to="/albums" style={{ color: 'var(--accent)', fontSize: '0.85rem', textDecoration: 'none' }}>View all →</Link>
       </div>
+      <div style={{ marginBottom: 14 }}>
+        <ViewControls layout={layout} setLayout={setLayout} perRow={perRow} setPerRow={setPerRow} />
+      </div>
+      <AlbumGrid albums={recent} layout={layout} perRow={perRow} />
     </div>
   )
 }
