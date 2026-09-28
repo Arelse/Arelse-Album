@@ -1,11 +1,12 @@
 import React, { useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 import { useData } from '../context/DataContext.jsx'
-import AlbumCover from '../components/AlbumCover.jsx'
+import AlbumGrid from '../components/AlbumGrid.jsx'
+import ViewControls from '../components/ViewControls.jsx'
+import { useViewPrefs } from '../utils/viewPrefs.js'
+import { CATEGORIES } from '../utils/constants.js'
 
-const CATEGORIES = ['Manhwa', 'Memes', 'Other']
 const COLORS = ['#6c3fd1', '#e6a817', '#4a6fd6', '#3fd17f', '#e6763a', '#c0392b']
-const VIEW_KEY = 'arelse_albums_view'
 
 function AlbumModal({ initial, onClose, onSave }) {
   const [name, setName] = useState(initial?.name || '')
@@ -63,13 +64,8 @@ export default function Albums() {
   const [params, setParams] = useSearchParams()
   const category = params.get('category')
   const [modal, setModal] = useState(null)
-  const [view, setView] = useState(() => localStorage.getItem(VIEW_KEY) || 'grid')
   const [merging, setMerging] = useState(false)
-
-  const setAndSaveView = (v) => {
-    setView(v)
-    localStorage.setItem(VIEW_KEY, v)
-  }
+  const { layout, setLayout, perRow, setPerRow } = useViewPrefs()
 
   const filtered = category ? albums.filter(a => a.category === category) : albums
 
@@ -123,26 +119,16 @@ export default function Albums() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 10 }}>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <button className={'btn ' + (!category ? '' : 'secondary')} onClick={() => setParams({})}>All</button>
-          {CATEGORIES.map(c => (
-            <button key={c} className={'btn ' + (category === c ? '' : 'secondary')} onClick={() => setParams({ category: c })}>{c}</button>
-          ))}
-        </div>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>
-            <button
-              onClick={() => setAndSaveView('grid')}
-              style={{ padding: '8px 12px', border: 'none', cursor: 'pointer', background: view === 'grid' ? 'var(--accent)' : 'transparent', color: view === 'grid' ? 'white' : 'var(--text)' }}
-            >Grid</button>
-            <button
-              onClick={() => setAndSaveView('list')}
-              style={{ padding: '8px 12px', border: 'none', cursor: 'pointer', background: view === 'list' ? 'var(--accent)' : 'transparent', color: view === 'list' ? 'white' : 'var(--text)' }}
-            >List</button>
-          </div>
-          <button className="btn" onClick={() => setModal('new')}>+ New album</button>
-        </div>
+      <div className="tabs">
+        <button className={'tab' + (!category ? ' on' : '')} onClick={() => setParams({})}>All</button>
+        {CATEGORIES.map(c => (
+          <button key={c} className={'tab' + (category === c ? ' on' : '')} onClick={() => setParams({ category: c })}>{c}</button>
+        ))}
+      </div>
+
+      <div className="section-head">
+        <ViewControls layout={layout} setLayout={setLayout} perRow={perRow} setPerRow={setPerRow} />
+        <button className="btn" onClick={() => setModal('new')}>+ New album</button>
       </div>
 
       {duplicateCount > 0 && (
@@ -162,47 +148,8 @@ export default function Albums() {
           <p>{category ? `You don't have any "${category}" albums yet.` : 'Create an album, then open it to import real photos from your gallery.'}</p>
           <button className="btn" onClick={() => setModal('new')}>+ New album</button>
         </div>
-      ) : view === 'grid' ? (
-        <div className="grid">
-          {filtered.map(a => (
-            <div key={a.id} className="card">
-              <Link to={`/albums/${a.id}`} style={{ textDecoration: 'none', color: 'var(--text)' }}>
-                <AlbumCover album={a} />
-                <div style={{ fontWeight: 600 }}>{a.name}</div>
-              </Link>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
-                <span className="badge outline">{a.category}</span>
-                <div style={{ display: 'flex', gap: 6 }}>
-                  <button className="btn secondary" style={{ padding: '6px 10px' }} onClick={() => setModal(a)}>Edit</button>
-                  <button className="btn danger" style={{ padding: '6px 10px' }} onClick={() => handleDelete(a)}>Delete</button>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {filtered.map(a => (
-            <div key={a.id} className="card" style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-              <Link to={`/albums/${a.id}`} style={{ flexShrink: 0, width: 72, height: 72, borderRadius: 10, overflow: 'hidden', position: 'relative', display: 'block' }}>
-                <div style={{ position: 'absolute', inset: 0, background: a.coverImage ? undefined : a.coverColor }}>
-                  {a.coverImage && <img src={a.coverImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
-                </div>
-              </Link>
-              <Link to={`/albums/${a.id}`} style={{ flex: 1, textDecoration: 'none', color: 'var(--text)', minWidth: 0 }}>
-                <div style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.name}</div>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 4 }}>
-                  <span className="badge outline">{a.category}</span>
-                  <span style={{ color: 'var(--text-dim)', fontSize: '0.78rem' }}>{a.images.length} image{a.images.length === 1 ? '' : 's'}</span>
-                </div>
-              </Link>
-              <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                <button className="btn secondary" style={{ padding: '6px 10px' }} onClick={() => setModal(a)}>Edit</button>
-                <button className="btn danger" style={{ padding: '6px 10px' }} onClick={() => handleDelete(a)}>Delete</button>
-              </div>
-            </div>
-          ))}
-        </div>
+        <AlbumGrid albums={filtered} layout={layout} perRow={perRow} onEdit={a => setModal(a)} onDelete={handleDelete} />
       )}
 
       {modal && (
