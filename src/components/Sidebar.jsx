@@ -1,18 +1,24 @@
 import React from 'react'
-import { NavLink } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
+import { CATEGORIES } from '../utils/constants.js'
 
 export default function Sidebar({ open }) {
-  const linkClass = ({ isActive }) => 'nav-link' + (isActive ? ' active' : '')
+  const { pathname, search } = useLocation()
+  const category = new URLSearchParams(search).get('category')
+  const cls = (active) => 'nav-link' + (active ? ' active' : '')
+  const inAlbums = pathname.startsWith('/albums')
+
   return (
     <aside className={'sidebar' + (open ? ' open' : '')}>
       <div className="brand"><span className="brand-dot" /> Arelsync</div>
-      <NavLink to="/" end className={linkClass}>Dashboard</NavLink>
-      <NavLink to="/albums" className={linkClass}>Albums</NavLink>
-      <NavLink to="/albums?category=Manhwa" className={linkClass}>Manhwa</NavLink>
-      <NavLink to="/albums?category=Memes" className={linkClass}>Memes</NavLink>
-      <NavLink to="/gallery" className={linkClass}>Whole Gallery</NavLink>
-      <NavLink to="/recognizer" className={linkClass}>Recognizer</NavLink>
-      <NavLink to="/settings" className={linkClass}>Settings</NavLink>
+      <Link to="/" className={cls(pathname === '/')}>Dashboard</Link>
+      <Link to="/albums" className={cls(inAlbums && !category)}>All albums</Link>
+      {CATEGORIES.map(c => (
+        <Link key={c} to={`/albums?category=${c}`} className={cls(inAlbums && category === c)}>{c}</Link>
+      ))}
+      <Link to="/gallery" className={cls(pathname === '/gallery')}>Whole Gallery</Link>
+      <Link to="/recognizer" className={cls(pathname === '/recognizer')}>Recognizer</Link>
+      <Link to="/settings" className={cls(pathname === '/settings')}>Settings</Link>
     </aside>
   )
 }
