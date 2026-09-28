@@ -14,12 +14,12 @@ import Recognizer from './pages/Recognizer.jsx'
 
 const TITLES = { '/': 'Dashboard', '/albums': 'Albums', '/settings': 'Settings', '/gallery': 'Whole Gallery', '/recognizer': 'Recognizer' }
 
-function Shell({ theme, setTheme }) {
+function Shell({ theme, setTheme, premium, setPremium }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const location = useLocation()
   const title = TITLES[location.pathname] || (location.pathname.startsWith('/albums/') ? 'Album' : 'Arelsync')
 
-  useEffect(() => setMenuOpen(false), [location.pathname])
+  useEffect(() => setMenuOpen(false), [location.pathname, location.search])
 
   return (
     <div className="app-shell">
@@ -34,7 +34,7 @@ function Shell({ theme, setTheme }) {
             <Route path="/albums/:id" element={<AlbumDetail />} />
             <Route path="/gallery" element={<WholeGallery />} />
             <Route path="/recognizer" element={<Recognizer />} />
-            <Route path="/settings" element={<Settings theme={theme} setTheme={setTheme} />} />
+            <Route path="/settings" element={<Settings theme={theme} setTheme={setTheme} premium={premium} setPremium={setPremium} />} />
           </Routes>
         </div>
       </div>
@@ -42,33 +42,41 @@ function Shell({ theme, setTheme }) {
   )
 }
 
-function Gate({ theme, setTheme }) {
+function Gate(props) {
   const { user, loading } = useAuth()
   if (loading) return null
   if (!user) return <Login />
   return (
     <DataProvider>
-      <Shell theme={theme} setTheme={setTheme} />
+      <Shell {...props} />
     </DataProvider>
   )
 }
 
 export default function App() {
   const [theme, setThemeState] = useState(() => localStorage.getItem('arelse_theme') || 'dark')
+  const [premium, setPremiumState] = useState(() => localStorage.getItem('arelse_premium_ui') !== '0')
 
   const setTheme = (t) => {
     setThemeState(t)
     localStorage.setItem('arelse_theme', t)
   }
+  const setPremium = (on) => {
+    setPremiumState(on)
+    localStorage.setItem('arelse_premium_ui', on ? '1' : '0')
+  }
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
   }, [theme])
+  useEffect(() => {
+    document.documentElement.setAttribute('data-ui', premium ? 'premium' : 'standard')
+  }, [premium])
 
   return (
     <HashRouter>
       <AuthProvider>
-        <Gate theme={theme} setTheme={setTheme} />
+        <Gate theme={theme} setTheme={setTheme} premium={premium} setPremium={setPremium} />
       </AuthProvider>
     </HashRouter>
   )
