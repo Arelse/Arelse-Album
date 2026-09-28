@@ -12,6 +12,7 @@ export default function AlbumDetail() {
   const fileRef = useRef(null)
   const [analysis, setAnalysis] = useState(null)
   const [analysing, setAnalysing] = useState(false)
+  const [analyseStatus, setAnalyseStatus] = useState('')
   const [importing, setImporting] = useState(false)
   const [importStatus, setImportStatus] = useState('')
   const [editingCover, setEditingCover] = useState(false)
@@ -68,9 +69,14 @@ export default function AlbumDetail() {
   const runAnalyser = async () => {
     setAnalysing(true)
     setAnalysis(null)
-    await new Promise(r => setTimeout(r, 400))
-    setAnalysis(analyseAlbum(album))
+    setAnalyseStatus('Starting…')
+    try {
+      setAnalysis(await analyseAlbum(album, setAnalyseStatus))
+    } catch (e) {
+      setAnalysis({ type: 'unknown', label: 'Analysis failed', confidence: 0, detail: e.message || 'Something went wrong.' })
+    }
     setAnalysing(false)
+    setAnalyseStatus('')
   }
 
   const setCoverFromImage = async (url) => {
@@ -128,11 +134,11 @@ export default function AlbumDetail() {
           <div>
             <strong>Album Analyser</strong>
             <p style={{ margin: '4px 0 0', color: 'var(--text-dim)', fontSize: '0.85rem' }}>
-              Uses real on-device AI (MobileNet) to tell comic/illustrated pages apart from memes and screenshots.
+              Compares pages against your Recognizer series with real on-device AI, then falls back to page-shape analysis.
             </p>
           </div>
           <button className="btn secondary" onClick={runAnalyser} disabled={analysing || album.images.length === 0}>
-            {analysing ? 'Analysing…' : 'Run analysis'}
+            {analysing ? (analyseStatus || 'Analysing…') : 'Run analysis'}
           </button>
         </div>
 
@@ -145,6 +151,11 @@ export default function AlbumDetail() {
               {analysis.confidence > 0 && <span className="badge">{Math.round(analysis.confidence * 100)}% match</span>}
             </div>
             <p style={{ margin: '6px 0 0', color: 'var(--text-dim)', fontSize: '0.85rem' }}>{analysis.detail}</p>
+            {analysis.candidates && analysis.candidates.length > 0 && (
+              <p style={{ margin: '8px 0 0', color: 'var(--text-dim)', fontSize: '0.78rem' }}>
+                Closest series: {analysis.candidates.map(c => `${c.name} ${Math.round(c.score * 100)}%`).join(' · ')}
+              </p>
+            )}
           </div>
         )}
       </div>
